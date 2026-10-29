@@ -1,0 +1,8 @@
+{
+  "name": "Apex Coaching ERP — Laravel 11 Administration",
+  "description": "Enterprise-grade Coaching & Class Management ERP with role-based access, student admissions, fee scheduling, dynamic system menus, batch transfers, and complete audit logging.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

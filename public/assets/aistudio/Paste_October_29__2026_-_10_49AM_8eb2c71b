@@ -1,0 +1,660 @@
+# 🎓 Coaching Management System — Final Laravel 11 MVC Build Prompt (No Landing Page, Admin-Only, Role-Based)
+
+Neeche **poora final prompt** hai. Ise **Cursor** ya **Claude Code** mein paste karein (Google AI Studio / Bolt / Replit mein **nahi** — woh React-only hain aur phir se `src/` bana denge).
+
+---
+
+## 📋 COPY THIS ENTIRE BLOCK
+
+---
+
+You are a senior Laravel engineer. Build a **production-grade Coaching / Class Management System** as a **Laravel 11 (PHP 8.3+) MVC application**. This is an **admin-only, role-based, authenticated backend system**. There is **NO public landing page**. The root URL `/` redirects to `/login`. Follow every instruction below **exactly**.
+
+---
+
+## 🚫 ABSOLUTE PROHIBITIONS (Read First — Non-Negotiable)
+
+1. **DO NOT create a `src/` folder anywhere.** Not at root, not inside `resources/`, not anywhere. If you feel the urge to create `src/`, stop — you are doing it wrong.
+2. **DO NOT create any `.tsx`, `.ts`, `.jsx` files.** Zero. The only JS files allowed are inside `resources/js/` for Bootstrap/AdminLTE helpers (plain `.js`, no TypeScript, no React).
+3. **DO NOT create `src/App.tsx`, `src/main.tsx`, `src/index.css`, `src/components/`, `src/views/`, `src/data/`, `src/types/`** — these are React patterns and are forbidden.
+4. **DO NOT create `package.json` entries for React, Vite-React, TypeScript.** Only `vite` + `tailwindcss` + `bootstrap` + `axios` + `laravel-vite-plugin`.
+5. **DO NOT create `index.html` at project root.** Laravel uses `resources/views/` and `public/index.php`. There is no root `index.html`.
+6. **DO NOT create `metadata.json`.** That is a Replit/AI-Studio artifact, not part of Laravel.
+7. **DO NOT create mock data files** like `initialData.ts`, `mockDatabase.ts`, `laravelCodebase.ts`. All data comes from MySQL via Eloquent.
+8. **DO NOT create a `SqlStudio.tsx` or any browser-based SQL viewer.** The SQL file lives at `database/sql/` and is executed via CLI only.
+9. **DO NOT build a landing page.** No public marketing site. No `/courses` public page. No admission form visible to unauthenticated users. The system is 100% behind login.
+10. **DO NOT create hardcoded sidebar HTML.** Sidebar must be built from the `system_menus` table via `SidebarComposer`.
+11. **DO NOT use `if (Auth::user()->role === 'admin')` anywhere.** Use `@can('permission.code')` in Blade and `->middleware('permission:code')` in routes.
+12. **DO NOT leave `dd()`, `dump()`, `var_dump()`, `console.log()` in code.**
+
+If you find yourself creating any of the above, **stop and re-read this section**.
+
+---
+
+## 🧱 1. TECH STACK
+
+| Layer | Technology |
+|---|---|
+| Framework | Laravel 11.x (PHP 8.3+) |
+| Database | MySQL 8 |
+| Auth | Laravel Breeze **Blade stack only** (no React, no Vue, no API mode) |
+| Authorization | `spatie/laravel-permission` (roles + permission codes) |
+| Admin UI | Blade + Bootstrap 5 + AdminLTE 3 (or KaiAdmin) |
+| PDF | `barryvdh/laravel-dompdf` |
+| Excel | `maatwebsite/excel` |
+| Queue | Redis + Laravel Horizon |
+| Assets | Vite (`laravel-vite-plugin`) — Bootstrap + Tailwind + plain JS only |
+
+---
+
+## 🚀 2. INITIALIZATION COMMANDS (Exact Order)
+
+```bash
+composer create-project laravel/laravel:^11.0 coaching-admin
+cd coaching-admin
+
+composer require laravel/breeze --dev
+composer require spatie/laravel-permission
+composer require barryvdh/laravel-dompdf
+composer require maatwebsite/excel
+composer require laravel/horizon
+composer require predis/predis
+
+php artisan breeze:install blade
+npm install
+npm install bootstrap @popperjs/core admin-lte
+npm run build
+
+php artisan vendor:publish --provider="Spatie\Permission\PermissionServiceProvider"
+php artisan horizon:install
+php artisan key:generate
+php artisan storage:link
+
+# After migrations + seeders are written:
+php artisan migrate:fresh --seed
+php artisan serve
+```
+
+---
+
+## 📁 3. FINAL PROJECT STRUCTURE (Exact — No `src/` Anywhere)
+
+```
+coaching-admin/
+│
+├── .env
+├── .env.example
+├── .gitignore
+├── artisan
+├── composer.json
+├── composer.lock
+├── package.json                 ← only vite, tailwind, bootstrap, admin-lte, axios
+├── vite.config.js
+├── tailwind.config.js
+├── postcss.config.js
+├── README.md
+│
+├── app/
+│   ├── Console/Kernel.php
+│   ├── Exceptions/Handler.php
+│   │
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── Controller.php
+│   │   │   ├── Auth/                              ← Breeze
+│   │   │   │   ├── AuthenticatedSessionController.php
+│   │   │   │   ├── ConfirmablePasswordController.php
+│   │   │   │   ├── EmailVerificationController.php
+│   │   │   │   ├── NewPasswordController.php
+│   │   │   │   ├── PasswordController.php
+│   │   │   │   ├── PasswordResetLinkController.php
+│   │   │   │   └── RegisteredUserController.php   ← disable public registration
+│   │   │   ├── Admin/
+│   │   │   │   ├── DashboardController.php
+│   │   │   │   ├── StaffController.php
+│   │   │   │   ├── CourseController.php
+│   │   │   │   ├── BatchController.php
+│   │   │   │   ├── StudentController.php
+│   │   │   │   ├── FeeController.php
+│   │   │   │   ├── FeePlanController.php
+│   │   │   │   ├── AttendanceController.php
+│   │   │   │   ├── LeaveController.php
+│   │   │   │   ├── TestController.php
+│   │   │   │   ├── MarksController.php
+│   │   │   │   ├── ExpenseController.php
+│   │   │   │   ├── ReportController.php
+│   │   │   │   ├── NotificationTemplateController.php
+│   │   │   │   ├── AnnouncementController.php
+│   │   │   │   ├── RoleController.php
+│   │   │   │   ├── MenuController.php
+│   │   │   │   ├── SettingController.php
+│   │   │   │   └── AuditLogController.php
+│   │   │   ├── Teacher/
+│   │   │   │   ├── DashboardController.php
+│   │   │   │   ├── AttendanceController.php
+│   │   │   │   └── MarksController.php
+│   │   │   ├── Student/
+│   │   │   │   ├── DashboardController.php
+│   │   │   │   ├── ResultController.php
+│   │   │   │   └── FeeController.php
+│   │   │   └── Parent/
+│   │   │       └── DashboardController.php
+│   │   │
+│   │   ├── Middleware/
+│   │   │   ├── AuditLogger.php                    ← custom
+│   │   │   ├── RoleMiddleware.php                 ← custom
+│   │   │   └── (Breeze defaults: Authenticate, EncryptCookies, etc.)
+│   │   │
+│   │   ├── Requests/
+│   │   │   ├── StoreStaffRequest.php
+│   │   │   ├── StoreCourseRequest.php
+│   │   │   ├── StoreBatchRequest.php
+│   │   │   ├── StoreStudentRequest.php
+│   │   │   ├── UpdateStudentRequest.php
+│   │   │   ├── CollectFeeRequest.php
+│   │   │   ├── RefundRequest.php
+│   │   │   ├── MarkAttendanceRequest.php
+│   │   │   ├── StoreTestRequest.php
+│   │   │   ├── MarksEntryRequest.php
+│   │   │   ├── StoreMenuRequest.php
+│   │   │   ├── StoreRoleRequest.php
+│   │   │   └── StoreTemplateRequest.php
+│   │   │
+│   │   └── View/Composers/
+│   │       └── SidebarComposer.php                ← dynamic sidebar
+│   │
+│   ├── Models/
+│   │   ├── User.php
+│   │   ├── Staff.php
+│   │   ├── Course.php
+│   │   ├── Batch.php
+│   │   ├── Student.php
+│   │   ├── ParentModel.php                        ← "Parent" reserved in PHP
+│   │   ├── FeePlan.php
+│   │   ├── FeePayment.php
+│   │   ├── Refund.php
+│   │   ├── Attendance.php
+│   │   ├── LeaveApplication.php
+│   │   ├── Test.php
+│   │   ├── TestResult.php
+│   │   ├── Expense.php
+│   │   ├── Holiday.php
+│   │   ├── NotificationTemplate.php
+│   │   ├── Announcement.php
+│   │   ├── SystemMenu.php
+│   │   ├── Setting.php
+│   │   └── AuditLog.php
+│   │
+│   ├── Notifications/
+│   │   ├── FeeDueNotification.php
+│   │   ├── FeeReceivedNotification.php
+│   │   ├── AbsentNotification.php
+│   │   ├── TestResultNotification.php
+│   │   └── AnnouncementNotification.php
+│   │
+│   ├── Policies/
+│   │   ├── StudentPolicy.php
+│   │   ├── FeePolicy.php
+│   │   └── MenuPolicy.php
+│   │
+│   ├── Providers/
+│   │   ├── AppServiceProvider.php
+│   │   ├── AuthServiceProvider.php
+│   │   ├── EventServiceProvider.php
+│   │   ├── RouteServiceProvider.php
+│   │   └── ViewServiceProvider.php                ← register SidebarComposer
+│   │
+│   └── Services/
+│       ├── MenuService.php
+│       ├── PermissionService.php
+│       ├── FeeService.php
+│       ├── AttendanceService.php
+│       ├── ResultService.php
+│       ├── ReceiptService.php
+│       └── AuditService.php
+│
+├── bootstrap/
+│   ├── app.php
+│   ├── providers.php
+│   └── cache/
+│
+├── config/
+│   ├── app.php
+│   ├── auth.php
+│   ├── cache.php
+│   ├── database.php
+│   ├── filesystems.php
+│   ├── horizon.php
+│   ├── mail.php
+│   ├── permission.php
+│   ├── queue.php
+│   ├── services.php
+│   ├── session.php
+│   └── view.php
+│
+├── database/
+│   ├── factories/
+│   │   ├── UserFactory.php
+│   │   └── StudentFactory.php
+│   │
+│   ├── migrations/
+│   │   ├── 0001_01_01_000000_create_users_table.php
+│   │   ├── 0001_01_01_000001_create_cache_table.php
+│   │   ├── 0001_01_01_000002_create_jobs_table.php
+│   │   ├── 2025_01_01_000001_create_permission_tables.php
+│   │   ├── 2025_01_01_000002_create_system_menus_table.php
+│   │   ├── 2025_01_01_000003_create_staff_table.php
+│   │   ├── 2025_01_01_000004_create_courses_table.php
+│   │   ├── 2025_01_01_000005_create_batches_table.php
+│   │   ├── 2025_01_01_000006_create_students_table.php
+│   │   ├── 2025_01_01_000007_create_student_batch_table.php
+│   │   ├── 2025_01_01_000008_create_fee_plans_table.php
+│   │   ├── 2025_01_01_000009_create_fee_payments_table.php
+│   │   ├── 2025_01_01_000010_create_refunds_table.php
+│   │   ├── 2025_01_01_000011_create_attendance_table.php
+│   │   ├── 2025_01_01_000012_create_leave_applications_table.php
+│   │   ├── 2025_01_01_000013_create_tests_table.php
+│   │   ├── 2025_01_01_000014_create_test_results_table.php
+│   │   ├── 2025_01_01_000015_create_expenses_table.php
+│   │   ├── 2025_01_01_000016_create_notification_templates_table.php
+│   │   ├── 2025_01_01_000017_create_announcements_table.php
+│   │   ├── 2025_01_01_000018_create_settings_table.php
+│   │   ├── 2025_01_01_000019_create_audit_logs_table.php
+│   │   └── 2025_01_01_000020_create_holidays_table.php
+│   │
+│   ├── seeders/
+│   │   ├── DatabaseSeeder.php
+│   │   ├── AdminSeeder.php
+│   │   ├── RolePermissionSeeder.php
+│   │   ├── MenuSeeder.php
+│   │   ├── SettingSeeder.php
+│   │   └── NotificationTemplateSeeder.php
+│   │
+│   └── sql/
+│       └── full_schema_and_queries.sql            ← ★ REQUIRED
+│
+├── public/
+│   ├── index.php
+│   ├── .htaccess
+│   ├── robots.txt
+│   ├── favicon.ico
+│   ├── build/                                     ← vite output (gitignored)
+│   └── storage/                                   ← symlink
+│
+├── resources/
+│   ├── css/
+│   │   └── app.css                                ← Tailwind + Bootstrap + AdminLTE
+│   │
+│   ├── js/
+│   │   ├── app.js                                 ← bootstrap + adminlte init
+│   │   ├── admin.js                               ← menu drag-drop, AJAX helpers
+│   │   └── bootstrap.js
+│   │
+│   └── views/
+│       ├── auth/
+│       │   ├── login.blade.php
+│       │   ├── forgot-password.blade.php
+│       │   └── reset-password.blade.php
+│       │
+│       ├── layouts/
+│       │   ├── admin.blade.php                    ← master admin layout
+│       │   ├── teacher.blade.php
+│       │   ├── student.blade.php
+│       │   └── parent.blade.php
+│       │
+│       ├── components/
+│       │   ├── sidebar.blade.php                  ← DYNAMIC (from DB)
+│       │   ├── topbar.blade.php
+│       │   ├── footer.blade.php
+│       │   ├── alert.blade.php
+│       │   ├── modal.blade.php
+│       │   ├── form-input.blade.php
+│       │   ├── form-select.blade.php
+│       │   ├── data-table.blade.php
+│       │   └── permission-button.blade.php        ← @can wrapper
+│       │
+│       ├── admin/
+│       │   ├── dashboard.blade.php
+│       │   ├── staff/{index,create,edit,show}.blade.php
+│       │   ├── courses/{index,create,edit}.blade.php
+│       │   ├── batches/{index,create,edit,transfer,show}.blade.php
+│       │   ├── students/{index,create,edit,show}.blade.php
+│       │   ├── fees/{collect,index,receipt,refund,defaulters,structure}.blade.php
+│       │   ├── attendance/{mark,report,leave}.blade.php
+│       │   ├── tests/{index,create,edit,marks,analytics}.blade.php
+│       │   ├── expenses/index.blade.php
+│       │   ├── reports/index.blade.php
+│       │   ├── notifications/{templates,announce}.blade.php
+│       │   ├── roles/{index,create,edit}.blade.php
+│       │   ├── menus/{index,create,edit}.blade.php
+│       │   ├── settings/institute.blade.php
+│       │   └── audit/index.blade.php
+│       │
+│       ├── teacher/
+│       │   ├── dashboard.blade.php
+│       │   ├── attendance/mark.blade.php
+│       │   └── marks/entry.blade.php
+│       │
+│       ├── student/
+│       │   ├── dashboard.blade.php
+│       │   ├── results.blade.php
+│       │   └── fees.blade.php
+│       │
+│       ├── parent/
+│       │   └── dashboard.blade.php
+│       │
+│       └── emails/
+│           ├── fee-due.blade.php
+│           ├── fee-received.blade.php
+│           ├── absent.blade.php
+│           ├── test-result.blade.php
+│           └── announcement.blade.php
+│
+├── routes/
+│   ├── web.php
+│   ├── api.php
+│   ├── channels.php
+│   └── console.php
+│
+├── storage/
+│   ├── app/
+│   │   ├── public/
+│   │   └── private/
+│   ├── framework/
+│   └── logs/
+│
+├── tests/
+│   ├── Feature/
+│   │   ├── AuthTest.php
+│   │   ├── StudentCrudTest.php
+│   │   ├── FeeCollectionTest.php
+│   │   ├── AttendanceTest.php
+│   │   └── MenuBuilderTest.php
+│   └── Unit/
+│       ├── FeeServiceTest.php
+│       └── AttendanceServiceTest.php
+│
+└── vendor/                                        ← composer-managed, never edit
+```
+
+**Verification rule:** After the build, `find . -name "*.tsx" -o -name "*.ts" | grep -v vendor | grep -v node_modules` must return **zero results**. If it returns anything, the build is wrong.
+
+---
+
+## 🎯 4. ROOT ROUTE BEHAVIOR (No Landing Page)
+
+In `routes/web.php`:
+
+```php
+Route::get('/', function () {
+    return auth()->check()
+        ? redirect()->route('admin.dashboard')
+        : redirect()->route('login');
+});
+```
+
+- `/` → redirects to `/login` if not authenticated
+- `/` → redirects to `/admin/dashboard` if authenticated
+- Public user registration **disabled** (`RegisteredUserController` removed or gated)
+- Only **Super Admin** can create new staff/teacher/student/parent accounts
+- No `/courses`, `/faculty`, `/admission` public pages
+
+---
+
+## 📄 5. THE SQL FILE — `database/sql/full_schema_and_queries.sql`
+
+This file is the source of truth. It must contain, in this order:
+
+1. `CREATE DATABASE IF NOT EXISTS coaching_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; USE coaching_management;`
+2. `DROP TABLE IF EXISTS` in reverse FK order
+3. `CREATE TABLE` for all 20+ tables with FK, unique, index, soft-delete (`deleted_at`)
+4. `CREATE INDEX` for hot columns (phone, batch_id, attendance_date, fee_status)
+5. `INSERT` seed data:
+   - 1 Super Admin (bcrypt-hashed password — document in README)
+   - Roles: Super Admin, Teacher, Accountant, Receptionist, Student, Parent
+   - Permission codes for every module/action
+   - `system_menus` default rows (Dashboard, Staff, Courses, Batches, Students, Fees, Attendance, Tests, Expenses, Reports, Notifications, Roles, Menus, Settings, Audit)
+   - Default `settings`, `notification_templates`
+6. `SELECT` queries for every list view (joins, filters, pagination)
+7. `INSERT` / `UPDATE` / `DELETE` example queries for every CRUD action
+8. Aggregate queries (revenue, defaulters, weak students, teacher attendance)
+9. Recursive menu tree (`WITH RECURSIVE`)
+10. Audit trail query
+
+**Every Eloquent call in the app must have a matching raw SQL here.** Header comment must explain execution order.
+
+---
+
+## 🔑 6. ADVANCED FEATURES & INPUT LOGIC
+
+### 6.1 Dynamic Sidebar (Critical)
+
+**Schema:** `system_menus(id, parent_id, name, icon, route_name, url, sort_order, is_visible, permission_code, created_by, updated_by, timestamps)`
+
+**`SidebarComposer.php`:**
+```php
+public function compose(View $view) {
+    $user = auth()->user();
+    $cacheKey = 'sidebar_'.$user->id.'_'.md5($user->getAllPermissions()->pluck('name')->implode(','));
+    $menus = Cache::remember($cacheKey, 3600, function () use ($user) {
+        return SystemMenu::where('is_visible', 1)
+            ->when($user->hasRole('super-admin') === false, function ($q) use ($user) {
+                $q->whereIn('permission_code', $user->getAllPermissions()->pluck('name'));
+            })
+            ->orderBy('sort_order')
+            ->get()
+            ->toTree();  // custom method: group by parent_id
+    });
+    $view->with('sidebarMenus', $menus);
+}
+```
+
+**Blade `components/sidebar.blade.php`:**
+```blade
+<aside class="main-sidebar">
+  @foreach($sidebarMenus as $menu)
+    @include('components.sidebar-item', ['menu' => $menu])
+  @endforeach
+</aside>
+```
+
+**Menu Builder UI** (`/admin/menus`): drag-drop sortable (SortableJS via `resources/js/admin.js`), fields — name, icon, route_name, url, parent, sort_order, permission_code, is_visible.
+
+**Cache invalidation:** `MenuService::clearCache()` called in store/update/delete → flushes all `sidebar_*` keys.
+
+---
+
+### 6.2 Module Input Specifications
+
+#### Staff (Admin/Teacher/Accountant/Receptionist)
+- `full_name` (text, req), `email` (req, unique), `phone` (req, unique, E.164), `password` (req, min 8), `role_id` (select, req), `subjects[]` (multi-select if teacher), `batches[]` (multi), `joining_date` (date ≤ today), `salary` (decimal), `photo` (image ≤2MB), `status` (Active/Suspended), `notes`
+
+#### Course
+- `name` (req, unique), `code` (req, unique), `category` (select: Class 8–12 / JEE / NEET / Foundation), `duration_months` (1–36), `total_fee` (decimal ≥0), `installments_allowed` (1–12), `admission_fee` (decimal), `status` (Active/Archived), `description` (textarea max 1000)
+
+#### Batch
+- `name` (req, unique per course), `course_id` (select), `teacher_id` + `co_teacher_id` (search-select), `start_date`, `end_date` (> start), `class_days[]` (weekday checkboxes), `start_time`, `end_time` (> start), `room`, `max_capacity` (1–500), `status` (Upcoming/Ongoing/Completed/Cancelled)
+- **Validation logic:** reject if `enrolled_count >= max_capacity` on new student assignment
+- **Transfer tool:** source batch → target batch, students[], move/copy, effective date, notify checkbox
+
+#### Student Admission
+- `full_name`, `email` (optional, unique), `phone` (req, unique), `parent_name`, `parent_phone`, `dob` (≤ today), `gender`, `address_line1/2`, `city`, `state`, `zip`, `school_name`, `current_class` (select), `batch_id` (search-select — only capacity-available), `admission_date` (≤ today), `total_fee` (auto from course), `discount_amount` (≤ total, req reason if >0), `discount_reason` (Sibling/Merit/Staff Ward/Other), `final_fee` (auto), `payment_plan` (Full/Installments N), `first_payment_amount`, `payment_method` (Cash/Card/UPI/Bank), `payment_ref`, `photo`, `id_proof` (req, PDF/JPG ≤5MB), `status`, `send_welcome_sms` toggle
+- **Auto-logic:** on save, create `student_batch` pivot row, generate `fee_plans` rows based on `payment_plan`, generate roll number, write `audit_logs`, queue welcome SMS
+
+#### Fee Collection
+- `student_id` (search-select showing outstanding), `installment_id` (select, auto-populated), `amount_paid` (> 0, ≤ outstanding + advance allowed), `payment_method`, `reference_number` (req if non-cash), `payment_date` (≤ today), `late_fee` (auto-calc if overdue), `late_fee_waived` (toggle → req `waive_reason`), `receipt_note`, `auto_send_receipt` toggle
+- **On submit:** DB transaction → insert `fee_payments`, update balance, generate receipt PDF via `ReceiptService`, queue SMS+Email, write audit log
+
+#### Fee Plan Builder (per course)
+- `course_id`, `installment_no`, `due_after_days`, `amount`, `late_fee_per_day`, `grace_days` — repeatable rows
+
+#### Refund
+- `student_id`, `total_paid` (read-only), `refund_amount` (≤ paid), `refund_method` (Original/Cash/Bank), `reason` (Batch Cancelled/Withdrawal/Duplicate/Other), `reason_notes` (req if Other), `approver` (auto), `confirm` checkbox
+
+#### Attendance
+- `batch_id`, `date` (≤ today), `session` (Morning/Evening), `students[]` with `status` per student (Present/Absent/Late/Leave), `late_reason`, `leave_reason`, `remarks`, `notify_parents` toggle
+- **Transaction:** insert all rows atomically
+- **Side-effect:** for each Absent → queue `AbsentNotification` to parent phone
+
+#### Test
+- `name`, `type` (Unit/Mid-Term/Final/Practice/Mock), `course_id`, `batch_ids[]`, `subject`, `test_date`, `start_time`, `duration_min` (1–300), `total_marks` (1–1000), `passing_marks` (≤ total), `negative_marking` toggle → `negative_marks` (decimal), `syllabus` (textarea), `question_paper` (PDF), `status`, `publish_result` toggle
+
+#### Marks Entry
+- `test_id` (only Completed), table per student: `marks_obtained` (≤ total, auto-validate), `remarks`; bulk fill absent=0; save draft; publish (locks marks + queues student notification + writes audit)
+
+#### Expense
+- `category` (Salary/Printing/Utilities/Rent/Misc), `amount`, `date`, `paid_to`, `reference`, `attachment` (PDF), `notes`, `approved_by`
+
+#### Notification Template
+- `name` (unique), `channel` (SMS/Email/WhatsApp/Push), `trigger_event` (Fee Due/Absent/Test Result/Admission), `subject` (if email), `body` (rich text with `{{student_name}}`, `{{due_amount}}`, `{{batch}}`, `{{test_name}}`), `active` toggle, `preview` button
+
+#### Bulk Announcement
+- `audience` (All/By Course/By Batch/By Fee Status), `course_ids[]`/`batch_ids[]`, `channels[]`, `message` (max 500), `schedule` (Now/Scheduled datetime)
+
+#### Role Builder
+- `name` (unique), `description`, permission matrix grid (Module × view/create/edit/delete), `is_default` toggle
+
+#### Menu Builder
+- `name`, `parent_id`, `icon`, `route_name`, `url`, `sort_order` (drag-drop), `is_visible`, `permission_code` (unique)
+
+#### Institute Settings
+- `institute_name`, `logo`, `address`, `phone`, `email`, `website`, `gst_number`, `currency` (default INR), `receipt_prefix`, `reminder_days[]` (-7,-3,0,+3,+7), `academic_year_start`, `academic_year_end`
+
+---
+
+### 6.3 Dashboard (Real DB Aggregates)
+
+Widgets — all filtered by `date_range`, `course[]`, `batch[]`, `teacher`:
+- Today's fee collection (sum + count)
+- Today's attendance % per batch
+- Fee defaulters count + top 10
+- Upcoming tests this week
+- New admissions this month
+- Batch capacity utilization bars
+- Teacher-wise attendance chart
+- Monthly revenue vs target
+
+All cached 60s in Redis, invalidated on relevant model events.
+
+---
+
+### 6.4 Multi-Guard Auth
+
+`config/auth.php`:
+```php
+'guards' => [
+    'web'     => ['driver' => 'session', 'provider' => 'users'],
+    'teacher' => ['driver' => 'session', 'provider' => 'teachers'],
+    'student' => ['driver' => 'session', 'provider' => 'students'],
+    'parent'  => ['driver' => 'session', 'provider' => 'parents'],
+],
+```
+
+Each guard redirects to its own dashboard after login:
+- `/admin/dashboard` (super-admin, accountant, receptionist)
+- `/teacher/dashboard`
+- `/student/dashboard`
+- `/parent/dashboard`
+
+---
+
+### 6.5 Permission Codes (Seed all of these)
+
+```
+dashboard.view
+staff.view, staff.create, staff.edit, staff.delete
+course.view, course.create, course.edit, course.delete
+batch.view, batch.create, batch.edit, batch.delete, batch.transfer
+student.view, student.create, student.edit, student.delete
+fee.view, fee.collect, fee.refund, fee.waive, fee.defaulters
+attendance.view, attendance.mark, attendance.report, attendance.leave.approve
+test.view, test.create, test.edit, test.delete, test.marks.entry, test.publish
+expense.view, expense.create, expense.approve
+report.view, report.export
+notification.view, notification.send, notification.template.manage
+role.view, role.create, role.edit, role.delete
+menu.view, menu.create, menu.edit, menu.delete
+setting.view, setting.edit
+audit.view
+```
+
+---
+
+### 6.6 Audit Logging
+
+`AuditLogger` middleware on all admin/teacher routes:
+```php
+AuditLog::create([
+    'user_id'    => auth()->id(),
+    'action'     => $request->method().' '.$request->path(),
+    'entity'     => $entity,
+    'entity_id'  => $entityId,
+    'old_values' => json_encode($oldValues),
+    'new_values' => json_encode($newValues),
+    'ip'         => $request->ip(),
+    'user_agent' => $request->userAgent(),
+]);
+```
+
+Table is **append-only** — no update/delete allowed.
+
+---
+
+### 6.7 Security Rules
+
+- All DB writes in `DB::transaction()`
+- All money stored as `decimal(12,2)`
+- All file uploads validated (mime, size) + stored in `storage/app/private/` for sensitive docs
+- All passwords bcrypt/argon2
+- All sensitive fields (`id_proof` path, bank info) encrypted cast
+- CSRF on all forms
+- Login rate-limited 5/min
+- Session timeout 15 min idle
+- No `dd()`/`dump()` left in code
+- No editing `vendor/`
+
+---
+
+## ✅ 7. ACCEPTANCE CRITERIA
+
+1. `composer install && npm install && php artisan migrate:fresh --seed` runs clean
+2. `database/sql/full_schema_and_queries.sql` run against empty MySQL 8 → schema identical to migrations
+3. **`find . -name "*.tsx" -o -name "*.ts" | grep -v vendor | grep -v node_modules` returns ZERO results**
+4. Project root has **no `src/`, no `index.html`, no `metadata.json`**
+5. Root `/` → `/login` (unauthenticated) or `/admin/dashboard` (authenticated)
+6. No public registration page accessible
+7. Super Admin logs in → sees **dynamic sidebar from DB** → adds new menu at `/admin/menus` → assigns its permission to new role at `/admin/roles` → a user of that role logs in and sees the menu **without code change**
+8. Every module (Staff, Courses, Batches, Students, Fees, Attendance, Tests, Expenses, Reports, Notifications, Roles, Menus, Settings, Audit) has full CRUD with FormRequest validation
+9. Fee collection → PDF receipt + queued SMS/Email
+10. Attendance marking → absent parent SMS queued
+11. Test marks entry → publish → student dashboard shows result
+12. All list views: filters, pagination (25/page), real DB or empty state
+13. Every button is `@can`-wrapped
+14. Every finance/attendance edit writes `audit_logs`
+15. Multi-guard login works for admin, teacher, student, parent
+16. `php artisan test` passes
+17. `README.md` gets a clean machine running in under 15 minutes (includes default Super Admin credentials to change on first login)
+
+---
+
+## 📌 8. DELIVERY ORDER
+
+1. Fresh Laravel 11 + all composer packages
+2. `database/sql/full_schema_and_queries.sql` **first**
+3. Migrations matching SQL exactly
+4. Seeders (Admin, RolePermission, Menu, Setting, NotificationTemplate)
+5. Spatie permissions + guards
+6. Breeze **Blade only**
+7. `SidebarComposer` + `MenuService` + dynamic sidebar
+8. **Student module end-to-end** (controller, FormRequest, model, migration, Blade, routes, permission checks) — **review checkpoint before continuing**
+9. Remaining modules: Courses → Batches → Fees → Attendance → Tests → Expenses → Reports → Notifications → Roles → Menus → Settings → Audit
+10. Teacher / Student / Parent dashboards
+11. Feature tests
+12. `README.md` + `.env.example`
+13. `migrate:fresh --seed` + manual acceptance test
+
+---
+
+## 🎯 FINAL STATEMENT
+
+Deliver a **complete, working Laravel 11 MVC application** running on `php artisan serve`, connecting to real MySQL, **admin-only behind login**, with **dynamic sidebar**, **role-based permissions**, **no dummy data**, **no `src/` folder**, **no React/
